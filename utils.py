@@ -1,13 +1,30 @@
 import glob
 import os
+import string
+import unicodedata
 
-import nltk
 from nltk.corpus import stopwords
 
-# Punctuation removal
-# Stopword removal
-# Lemmatization
-# CountVectorizer for unigrams and bigrams
+STOP_WORDS = set(stopwords.words("english"))
+
+
+def preprocess_string(text: str) -> str:
+    # Following the order of the slides in the lecture
+
+    text = text.replace("\n", " ").strip()  # Remove newlines and trailing whitespace
+    text = text.translate(str.maketrans("", "", string.punctuation))  # Remove puctuation with lookup table
+    text = text.lower()  # Lowercase
+    text = " ".join([word for word in text.split() if word not in STOP_WORDS])  # Remove stopwords
+    text = text.translate(str.maketrans("", "", string.digits))  # Remove all numbers with lookup table
+
+    # Remove excess whitespace in between words
+    # E.g. the sentence "for 10 days" becomes "for days" instead of "for  days" with two spaces
+    text = " ".join(text.split())
+    text = unicodedata.normalize("NFKD", text)  # Strip accents from characters
+
+    # TODO: Lemmatization
+
+    return text
 
 
 def iterate_over_filepaths(fp_data: str, glob_pattern: str = "*.txt") -> list:
@@ -16,7 +33,9 @@ def iterate_over_filepaths(fp_data: str, glob_pattern: str = "*.txt") -> list:
 
     for fp in fps:
         with open(fp, "r", encoding="utf-8") as file:
-            text = file.read().replace("\n", " ").lower().strip()
+            text = file.read()
+
+        text = preprocess_string(text)
         docs.append(text)
 
     return docs
