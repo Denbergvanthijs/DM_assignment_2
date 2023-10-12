@@ -43,17 +43,18 @@ def iterate_over_filepaths(fp_data: str, glob_pattern: str = "*.txt") -> list:
     return docs
 
 
-def iterate_over_folds(fp_data: str, folds_train: list = ["fold1", "fold2", "fold3", "fold4"], folds_test: list = ["fold5"]) -> tuple:
+def iterate_over_folds(fp_data: str, folds_train: list = ["fold1", "fold2", "fold3", "fold4"],
+                       folds_test: list = ["fold5"], glob_pattern: str = "*.txt") -> tuple:
     docs_train = []
     docs_test = []
 
     for fold in folds_train:
         fp_fold = os.path.join(fp_data, fold)
-        docs_train.extend(iterate_over_filepaths(fp_fold))
+        docs_train.extend(iterate_over_filepaths(fp_fold, glob_pattern))
 
     for fold in folds_test:
         fp_fold = os.path.join(fp_data, fold)
-        docs_test.extend(iterate_over_filepaths(fp_fold))
+        docs_test.extend(iterate_over_filepaths(fp_fold, glob_pattern))
 
     assert len(folds_train) + len(folds_test) == 5, f"Number of folds must be 5, but is {len(folds_train)} + {len(folds_test)}"
     assert len(docs_train) + len(docs_test) == 400, f"Number of documents must be 400, but is {len(docs_train)} + {len(docs_test)}"
@@ -61,14 +62,15 @@ def iterate_over_folds(fp_data: str, folds_train: list = ["fold1", "fold2", "fol
     return docs_train, docs_test
 
 
-def load_data(fp_data, folds_train: list = ["fold1", "fold2", "fold3", "fold4"], folds_test: list = ["fold5"]) -> tuple:
+def load_data(fp_data, folds_train: list = ["fold1", "fold2", "fold3", "fold4"],
+              folds_test: list = ["fold5"], glob_pattern: str = "*.txt") -> tuple:
     # Load deceptive
     fp_deceptive = os.path.join(fp_data, "deceptive_from_MTurk")
-    docs_deceptive_train, docs_deceptive_test = iterate_over_folds(fp_deceptive, folds_train, folds_test)
+    docs_deceptive_train, docs_deceptive_test = iterate_over_folds(fp_deceptive, folds_train, folds_test, glob_pattern)
 
     # Load truthfull
     fp_truthfull = os.path.join(fp_data, "truthful_from_Web")
-    docs_truthfull_train, docs_truthfull_test = iterate_over_folds(fp_truthfull, folds_train, folds_test)
+    docs_truthfull_train, docs_truthfull_test = iterate_over_folds(fp_truthfull, folds_train, folds_test, glob_pattern)
 
     return docs_deceptive_train, docs_deceptive_test, docs_truthfull_train, docs_truthfull_test
 
@@ -87,21 +89,36 @@ def vectorize_data(vectorizer: CountVectorizer, class_0_train: list, class_0_tes
     return X_train, X_test, y_train, y_test
 
 
-if __name__ == "__main__":
-    fp_data = "./op_spam_v1.4/negative_polarity/"
-    max_features = None  # Maximum vocab size
-    ngram_range = (1, 1)  # Range of n-grams to include in the vocabulary
-    min_df = 0.05  # Minimal document frequency of a word to be included in the vocabulary
+def pipeline(fp_data: str, max_features: int = None, ngram_range: tuple = (1, 1), min_df: float = 0.05,
+             folds_train: list = ["fold1", "fold2", "fold3", "fold4"], folds_test: list = ["fold5"],
+             glob_pattern: str = "*.txt") -> tuple:
+    """Complete pipeline for loading and vectorizing the data
 
-    deceptive_train, deceptive_test, truthfull_train, truthfull_test = load_data(fp_data)
+    :param fp_data: Filepath to the data folder containing the folds
+    :type fp_data: str
+    :param max_features: Max number of features to include in the vocabulary, defaults to None
+    :type max_features: int, optional
+    :param ngram_range: Range of n-grams to include in the vocabulary, defaults to (1, 1)
+    :type ngram_range: tuple, optional
+    :param min_df: Minimal document frequency of a word to be included in the vocabulary, defaults to 0.05
+    :type min_df: float, optional
+    :param folds_train: Folds to be used for training, defaults to ["fold1", "fold2", "fold3", "fold4"]
+    :type folds_train: list, optional
+    :param folds_test: Folds to be used for testing, defaults to ["fold5"]
+    :type folds_test: list, optional
+    :param glob_pattern: Glob pattern to use for loading the data, defaults to "*.txt"
+    :type glob_pattern: str, optional
 
-    print(f"Deceptive train: {len(deceptive_train)}")
-    print(f"Deceptive test: {len(deceptive_test)}")
-    print(f"Truthfull train: {len(truthfull_train)}")
-    print(f"Truthfull test: {len(truthfull_test)}")
+    :return: X_train, X_val, X_test, y_train, y_val, y_test, vectorizer
+    :rtype: tuple
+    """
+    # Load the data and preprocess it
+    deceptive_train, deceptive_test, truthfull_train, truthfull_test = load_data(fp_data, folds_train, folds_test, glob_pattern)
 
+    # Initialize the vectorizer
     vectorizer = CountVectorizer(analyzer="word", max_features=max_features, ngram_range=ngram_range)
 
+    # Vectorize the data
     X_train, X_test, y_train, y_test = vectorize_data(vectorizer,
                                                       deceptive_train, deceptive_test,
                                                       truthfull_train, truthfull_test)
@@ -109,16 +126,18 @@ if __name__ == "__main__":
     # Split train into train and validation, stratified
     X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, stratify=y_train, test_size=0.2, random_state=42)
 
+    return X_train, X_val, X_test, y_train, y_val, y_test, vectorizer
+
+
+if __name__ == "__main__":
+    fp_data = "./op_spam_v1.4/negative_polarity/"
+    max_features = None  # Maximum vocab size
+    ngram_range = (1, 1)  # Range of n-grams to include in the vocabulary
+    min_df = 0.05  # Minimal document frequency of a word to be included in the vocabulary
+
+    X_train, X_val, X_test, y_train, y_val, y_test, vectorizer = pipeline(fp_data, max_features, ngram_range, min_df)
+
     print(f"X_train: {X_train.shape}; y_train: {len(y_train)}")
     print(f"X_val: {X_val.shape}; y_val: {len(y_val)}")
     print(f"X_test: {X_test.shape}; y_test: {len(y_test)}")
-
     print(f"Vocabulary size: {len(vectorizer.vocabulary_)}")
-
-    # Convert array to list of words
-    example = X_train[0].tolist()
-    print(example[:20])
-    # List of all words in the vocabulary that are present in the example
-    words = vectorizer.inverse_transform([example])[0]
-    print(f"In total {len(words)} words are present in the example. "
-          f"Excerpt of 20 words: {' '.join(words[:20])}")
