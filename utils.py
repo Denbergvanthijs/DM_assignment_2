@@ -73,6 +73,20 @@ def load_data(fp_data, folds_train: list = ["fold1", "fold2", "fold3", "fold4"],
     return docs_deceptive_train, docs_deceptive_test, docs_truthfull_train, docs_truthfull_test
 
 
+def vectorize_data(vectorizer: CountVectorizer, class_0_train: list, class_0_test: list,
+                   class_1_train: list, class_1_test: list) -> tuple:
+    # Fit and transform the training data
+    # 0: deceptive, 1: truthfull
+    X_train = vectorizer.fit_transform(class_0_train + class_1_train).toarray()
+    y_train = [0] * len(class_0_train) + [1] * len(class_1_train)
+
+    # Only transform the test data
+    X_test = vectorizer.transform(class_0_test + class_1_test).toarray()
+    y_test = [0] * len(class_0_test) + [1] * len(class_1_test)
+
+    return X_train, X_test, y_train, y_test
+
+
 if __name__ == "__main__":
     fp_data = "./op_spam_v1.4/negative_polarity/"
     max_features = None  # Maximum vocab size
@@ -88,17 +102,12 @@ if __name__ == "__main__":
 
     vectorizer = CountVectorizer(analyzer="word", max_features=max_features, ngram_range=ngram_range)
 
-    # Fit and transform the training data
-    # 0: deceptive, 1: truthfull
-    X_train = vectorizer.fit_transform(deceptive_train + truthfull_train).toarray()
-    y_train = [0] * len(deceptive_train) + [1] * len(truthfull_train)
+    X_train, X_test, y_train, y_test = vectorize_data(vectorizer,
+                                                      deceptive_train, deceptive_test,
+                                                      truthfull_train, truthfull_test)
 
-    # Only transform the test data
-    X_test = vectorizer.transform(deceptive_test + truthfull_test).toarray()
-    y_test = [0] * len(deceptive_test) + [1] * len(truthfull_test)
-
-    # Split train into train and validation
-    X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, stratify=y_train, test_size=0.2)
+    # Split train into train and validation, stratified
+    X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, stratify=y_train, test_size=0.2, random_state=42)
 
     print(f"X_train: {X_train.shape}; y_train: {len(y_train)}")
     print(f"X_val: {X_val.shape}; y_val: {len(y_val)}")
