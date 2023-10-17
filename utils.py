@@ -99,8 +99,8 @@ def vectorize_data(vectorizer: CountVectorizer, class_0_train: list, class_0_tes
 
 def pipeline(fp_data: str, max_features: int = None, ngram_range: tuple = (1, 1), min_df: float = 0.05,
              folds_train: list = ["fold1", "fold2", "fold3", "fold4"], folds_test: list = ["fold5"],
-             glob_pattern: str = "*.txt", stop_words: set = set(stopwords.words("english")), unicode_pattern: str = "NFKD",
-             val_size: float = 0.2, random_state: int = 42) -> tuple:
+             glob_pattern: str = "*.txt", stop_words: set = set(stopwords.words("english")), val_size: float = None,
+             unicode_pattern: str = "NFKD", random_state: int = 42) -> tuple:
     """Complete pipeline for loading and vectorizing the data
 
     :param fp_data: Filepath to the data folder containing the folds
@@ -141,6 +141,9 @@ def pipeline(fp_data: str, max_features: int = None, ngram_range: tuple = (1, 1)
                                                       deceptive_train, deceptive_test,
                                                       truthfull_train, truthfull_test)
 
+    if val_size is None:
+        return X_train, X_test, y_train, y_test, vectorizer
+
     # Split train into train and validation, stratified
     X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, stratify=y_train,
                                                       test_size=val_size, random_state=random_state)
@@ -157,8 +160,10 @@ if __name__ == "__main__":
     ngram_range = (1, 1)  # Range of n-grams to include in the vocabulary
     min_df = 0.05  # Minimal document frequency of a word to be included in the vocabulary
     stop_words = set(stopwords.words("english"))
+    val_size = 0.2  # Size of the validation set as a percentage of the training set, set to None to disable
 
-    X_train, X_val, X_test, y_train, y_val, y_test, vectorizer = pipeline(fp_data, max_features, ngram_range, min_df, stop_words=stop_words)
+    X_train, X_val, X_test, y_train, y_val, y_test, vectorizer = pipeline(fp_data, max_features, ngram_range, min_df,
+                                                                          stop_words=stop_words, val_size=val_size)
 
     print(f"X_train: {X_train.shape}; y_train: {len(y_train)}")
     print(f"X_val: {X_val.shape}; y_val: {len(y_val)}")
