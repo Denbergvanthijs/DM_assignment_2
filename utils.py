@@ -184,6 +184,15 @@ def calculate_metrics(y_true: np.ndarray, y_pred: np.ndarray) -> tuple:
     return accuracy, precision, recall, f1_score
 
 
+def get_top_n_words(X_data: np.ndarray, vectorizer: CountVectorizer, top_n: int = 5) -> tuple:
+    freqs = np.sum(X_data, axis=0)
+    top_5_indices = np.argsort(freqs)[::-1][:top_n]  # Order in descending order and get the top 5 indices
+    top_5_tokens = vectorizer.get_feature_names_out()[top_5_indices]
+    top_5_freqs = freqs[top_5_indices]
+
+    return top_5_tokens, top_5_freqs
+
+
 if __name__ == "__main__":
     nltk.download("wordnet")
     nltk.download("stopwords")
@@ -202,6 +211,12 @@ if __name__ == "__main__":
     print(f"X_val: {X_val.shape}; y_val: {len(y_val)}")
     print(f"X_test: {X_test.shape}; y_test: {len(y_test)}")
     print(f"Vocabulary size: {len(vectorizer.vocabulary_)}")
+
+    print("Top tokens in the vocabulary of the training data:")
+    X_data = np.concatenate((X_train, X_val))
+    top_n_words, top_n_freqs = get_top_n_words(X_data, vectorizer, top_n=5)
+    for token, freq in zip(top_n_words, top_n_freqs):
+        print(f"{token} ({freq}x)")
 
     # Calculate baseline metrics by predicting the majority class
     y_test = np.array(y_test)
