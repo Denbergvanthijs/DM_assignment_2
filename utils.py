@@ -4,6 +4,7 @@ import string
 import unicodedata
 
 import nltk
+import numpy as np
 from nltk.corpus import stopwords
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.model_selection import train_test_split
@@ -151,6 +152,38 @@ def pipeline(fp_data: str, max_features: int = None, ngram_range: tuple = (1, 1)
     return X_train, X_val, X_test, y_train, y_val, y_test, vectorizer
 
 
+def calculate_metrics(y_true: np.ndarray, y_pred: np.ndarray) -> tuple:
+    """Calculate accuracy, precision, recall and f1 score
+
+    :param y_true: Binary ground truth labels
+    :type y_true: np.ndarray
+    :param y_pred: Binary predictions
+    :type y_pred: np.ndarray
+    :return: Accuracy, precision, recall and f1 score
+    :rtype: tuple
+    """
+    assert y_true.shape == y_pred.shape, f"y_true and y_pred must have the same shape, but are {y_true.shape} and {y_pred.shape}"
+
+    # Check if y_true and y_pred do not contain any other values than 0 and 1
+    assert np.all(np.isin(y_true, [0, 1])), f"y_true must only contain 0 and 1, but contains {np.unique(y_true)}"
+    assert np.all(np.isin(y_pred, [0, 1])), f"y_pred must only contain 0 and 1, but contains {np.unique(y_pred)}"
+
+    TP = np.sum((y_true == 1) & (y_pred == 1))
+    TN = np.sum((y_true == 0) & (y_pred == 0))
+    FP = np.sum((y_true == 0) & (y_pred == 1))
+    FN = np.sum((y_true == 1) & (y_pred == 0))
+
+    if TP == 0:
+        return 0.5, 0, 0, 0
+
+    accuracy = (TP + TN) / (TP + TN + FP + FN)
+    precision = TP / (TP + FP)
+    recall = TP / (TP + FN)
+    f1_score = 2 * (precision * recall) / (precision + recall)
+
+    return accuracy, precision, recall, f1_score
+
+
 if __name__ == "__main__":
     nltk.download("wordnet")
     nltk.download("stopwords")
@@ -169,3 +202,9 @@ if __name__ == "__main__":
     print(f"X_val: {X_val.shape}; y_val: {len(y_val)}")
     print(f"X_test: {X_test.shape}; y_test: {len(y_test)}")
     print(f"Vocabulary size: {len(vectorizer.vocabulary_)}")
+
+    # Calculate baseline metrics by predicting the majority class
+    y_test = np.array(y_test)
+    y_pred = np.ones_like(y_test)
+    accuracy, precision, recall, f1_score = calculate_metrics(y_test, y_pred)
+    print(f"Baseline accuracy: {accuracy:.4f}, precision: {precision:.4f}, recall: {recall:.4f}, f1_score: {f1_score:.4f}")
