@@ -212,9 +212,25 @@ if __name__ == "__main__":
     print(f"X_test: {X_test.shape}; y_test: {len(y_test)}")
     print(f"Vocabulary size: {len(vectorizer.vocabulary_)}")
 
+    X_data = np.concatenate((X_train, X_val))  # For printing the top n words
+    y_data = np.concatenate((y_train, y_val))
+
     print("Top tokens in the vocabulary of the training data:")
-    X_data = np.concatenate((X_train, X_val))
     top_n_words, top_n_freqs = get_top_n_words(X_data, vectorizer, top_n=5)
+    for token, freq in zip(top_n_words, top_n_freqs):
+        print(f"{token} ({freq}x)")
+
+    print("Top tokens in the vocabulary of the deceptive training data:")
+    X_data_deceptive = X_data[y_data == 0]
+    top_n_words, top_n_freqs = get_top_n_words(X_data_deceptive, vectorizer, top_n=5)
+
+    for token, freq in zip(top_n_words, top_n_freqs):
+        print(f"{token} ({freq}x)")
+
+    print("Top tokens in the vocabulary of the truthfull training data:")
+    X_data_truthfull = X_data[y_data == 1]
+    top_n_words, top_n_freqs = get_top_n_words(X_data_truthfull, vectorizer, top_n=5)
+
     for token, freq in zip(top_n_words, top_n_freqs):
         print(f"{token} ({freq}x)")
 
